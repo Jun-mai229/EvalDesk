@@ -67,7 +67,9 @@ class Regression(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(command_prepare(args), 0)
             self.assertIn("A1:FH1000", calls[1])
-            manifest = json.loads((Path(directory) / "manifest.json").read_text())
+            manifest = json.loads(
+                (Path(directory) / "manifest.json").read_text(encoding="utf-8")
+            )
             self.assertTrue(manifest["schema"]["blind"])
 
     def test_zero_one_three_history_rounds(self):
