@@ -218,7 +218,7 @@ def command_serve(args: argparse.Namespace) -> int:
     ]
     if missing_assets:
         raise WorkbenchError(f"缺少 UI 资产: {missing_assets}")
-    selected_port = find_available_port(args.port)
+    selected_port = 0 if args.port == 0 else find_available_port(args.port)
     stop_token = secrets.token_urlsafe(32)
     server = ThreadingHTTPServer(
         ("127.0.0.1", selected_port), make_handler(session, stop_token)
