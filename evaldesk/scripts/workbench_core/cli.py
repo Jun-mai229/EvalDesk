@@ -14,6 +14,17 @@ from .template import command_diagnose, command_prepare
 from .writeback import command_commit
 
 
+def configure_output_encoding() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8")
+        except (OSError, ValueError):
+            pass
+
+
 def add_assignment_arguments(command: argparse.ArgumentParser) -> None:
     assignment = command.add_mutually_exclusive_group(required=True)
     assignment.add_argument("--annotator", help="只载入分配给该标注人的任务")
@@ -112,6 +123,7 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(argv: list[str] | None = None) -> int:
+    configure_output_encoding()
     args = parser().parse_args(argv)
     try:
         return args.handler(args)

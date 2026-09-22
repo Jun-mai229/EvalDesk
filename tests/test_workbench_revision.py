@@ -1,6 +1,8 @@
 """Offline regression using anonymous synthetic templates."""
 import argparse
 import copy
+import contextlib
+import io
 import json
 import sys
 import unittest
@@ -62,7 +64,8 @@ class Regression(unittest.TestCase):
             args = argparse.Namespace(url="x", sheet_id="x", range="auto", validation_end_row=20,
                                       annotator="测试员", include_unassigned=False, target_group=None,
                                       session=directory, force=False, blind=False)
-            self.assertEqual(command_prepare(args), 0)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(command_prepare(args), 0)
             self.assertIn("A1:FH1000", calls[1])
             manifest = json.loads((Path(directory) / "manifest.json").read_text())
             self.assertTrue(manifest["schema"]["blind"])

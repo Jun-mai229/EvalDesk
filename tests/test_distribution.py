@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,18 @@ def load_installer():
 
 
 class Distribution(unittest.TestCase):
+    def test_cli_uses_utf8_with_legacy_console_encoding(self):
+        environment = os.environ.copy()
+        environment["PYTHONIOENCODING"] = "cp1252"
+        result = subprocess.run(
+            [sys.executable, "-m", "evaldesk", "--help"],
+            cwd=ROOT,
+            capture_output=True,
+            env=environment,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("飞书", result.stdout.decode("utf-8"))
+
     def test_skill_is_self_contained(self):
         installer = load_installer()
         source = ROOT / "skill" / "evaldesk"
