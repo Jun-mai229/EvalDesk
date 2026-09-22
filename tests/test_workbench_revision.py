@@ -10,10 +10,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "evaldesk/scripts"))
+from workbench_core.aliases import load_aliases
 from workbench_core.common import WorkbenchError
 from workbench_core.schema import parse_schema
 from workbench_core.self_test import fake_arbitration_payloads, fake_payloads, column_letters
-from workbench_core.template import build_session, parse_annotated_csv, extract_urls, decode_score_sequence
+from workbench_core.template import (
+    _diagnostic_suggestions,
+    build_session,
+    decode_score_sequence,
+    extract_urls,
+    parse_annotated_csv,
+)
 from workbench_core.server import validate_browser_payload
 from workbench_core.writeback import build_writes
 
@@ -106,6 +113,50 @@ class Regression(unittest.TestCase):
         results["rows"]["4"]["dimensions"]["d1"]["human_score"] = ["3", "", "", ""]
         with self.assertRaises(WorkbenchError):
             build_writes(manifest, tasks, results)
+
+    def test_custom_field_aliases_and_conflict_validation(self):
+        data, _ = fake_payloads()
+        columns = data["data"]["col_indices"]
+        rows = parse_annotated_csv(data["data"]["annotated_csv"], columns)
+        rows[2][0] = "案例编号"
+        rows[2][1] = "原始提示"
+        rows[2][4] = "生成物_baseline"
+        rows[2][5] = "执行人"
+        rows[2][-1] = "总分"
+        for index, value in enumerate(rows[3]):
+            if value == "人评打分":
+                rows[3][index] = "人工打分"
+
+        custom = {
+            "basic_fields": {
+                "id": ["案例编号"],
+                "prompt": ["原始提示"],
+                "outputs": ["生成物"],
+                "annotator": ["执行人"],
+            },
+            "score_fields": {"human_score": ["人工打分"]},
+            "mos": ["总分"],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "aliases.json"
+            path.write_text(json.dumps(custom, ensure_ascii=False), encoding="utf-8")
+            aliases = load_aliases(str(path))
+            parsed = parse_schema(columns, rows, aliases=aliases)
+            self.assertEqual(parsed[1]["id"], 0)
+            self.assertEqual(parsed[1]["outputs"], 4)
+            self.assertEqual(parsed[2], len(columns) - 1)
+
+            custom["score_fields"]["tags"] = ["人工打分"]
+            path.write_text(json.dumps(custom, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaisesRegex(WorkbenchError, "字段别名冲突"):
+                load_aliases(str(path))
+
+    def test_template_diagnostic_suggestions(self):
+        suggestions = _diagnostic_suggestions(
+            ["未找到人工 MOS 评分区", "找不到所选评分组对应的输出列"]
+        )
+        self.assertTrue(any("mos" in item.lower() for item in suggestions))
+        self.assertTrue(any("输出" in item for item in suggestions))
 
 
 if __name__ == "__main__":

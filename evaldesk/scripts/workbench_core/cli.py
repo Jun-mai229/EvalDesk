@@ -5,7 +5,7 @@ import argparse
 import sys
 
 from .common import DEFAULT_RANGE, WorkbenchError
-from .environment import command_doctor
+from .environment import command_doctor, command_setup
 from .launcher import command_launch
 from .lifecycle import command_stop
 from .self_test import command_self_test
@@ -69,6 +69,19 @@ def parser() -> argparse.ArgumentParser:
         "--no-browser-check", action="store_true", help="跳过默认浏览器检查"
     )
     doctor.set_defaults(handler=command_doctor)
+
+    setup = subparsers.add_parser(
+        "setup", help="面向首次使用者检查环境并给出下一步操作"
+    )
+    setup.add_argument("--url", help="可选；同时验证飞书登录和目标表访问")
+    setup.add_argument("--sheet-id", help="链接不含 sheet 参数时显式指定")
+    setup.add_argument("--session-root", help="会话目录根路径")
+    setup.add_argument("--port", type=int, default=4180, help="首选本地端口")
+    setup.add_argument(
+        "--no-browser-check", action="store_true", help="跳过默认浏览器检查"
+    )
+    setup.add_argument("--json", action="store_true", help="输出结构化 JSON")
+    setup.set_defaults(handler=command_setup)
 
     launch = subparsers.add_parser("launch", help="环境检查后创建会话并启动工作台")
     add_prepare_arguments(launch)

@@ -23,15 +23,14 @@ or virtual environment unless a future feature introduces a real dependency.
 Run a local-only check:
 
 ```bash
-python3 scripts/doctor.py --no-browser-check
+evaldesk setup --no-browser-check
 ```
 
 Include a source URL to verify the active user identity can access the workbook
 and selected sheet:
 
 ```bash
-python3 scripts/doctor.py \
-  --url '<feishu-sheet-url>'
+evaldesk setup --url '<feishu-sheet-url>' --no-browser-check
 ```
 
 The check reports Python, `lark-cli`, packaged UI assets, session-directory
@@ -44,12 +43,15 @@ Never package access tokens, cookies, app secrets, or another user's login
 state with EvalDesk. `lark-cli` owns authentication. EvalDesk only invokes it
 with user identity and consumes its structured JSON response.
 
-If Feishu access fails, complete authentication through the supported
-`lark-cli` authorization flow, then rerun `doctor.py` with the target URL.
+If Feishu access fails, inspect the current user identity with
+`lark-cli auth status --json --verify`, complete authentication through the
+supported `lark-cli` authorization flow, then rerun `evaldesk setup` with the
+target URL.
 
 ## Distribution
 
-- Preserve `scripts/`, `references/`, and `assets/` together.
+- Distribute the built wheel instead of selected Python source files.
+- Keep the optional Agent Skill's `SKILL.md` and `references/` together.
 - Do not distribute `~/.evaldesk/sessions/`; it contains source links, task
   content, media URLs, and local annotation results.
 - Keep credentials under the user's own `lark-cli` configuration. Never copy

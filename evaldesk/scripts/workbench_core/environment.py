@@ -21,6 +21,15 @@ from .common import (
 
 MINIMUM_PYTHON = (3, 9)
 REQUIRED_ASSETS = ("index.html", "styles.css", "app.js")
+CHECK_LABELS = {
+    "python": "Python",
+    "lark_cli": "lark-cli",
+    "assets": "界面资源",
+    "session_directory": "会话目录",
+    "local_port": "本地端口",
+    "browser": "浏览器",
+    "feishu_access": "飞书访问",
+}
 
 
 def check_environment(
@@ -177,4 +186,65 @@ def command_doctor(args: argparse.Namespace) -> int:
         check_browser=not args.no_browser_check,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["ok"] else 1
+
+
+def setup_next_steps(
+    report: dict[str, Any], url: str | None = None
+) -> list[str]:
+    checks = {item["name"]: item for item in report["checks"]}
+    steps: list[str] = []
+    if not checks["python"]["ok"]:
+        steps.append("安装 Python 3.9 或更高版本，然后重新运行 evaldesk setup。")
+    if not checks["lark_cli"]["ok"]:
+        steps.append("安装 lark-cli，并确认在终端执行 lark-cli --version 能成功。")
+    if not checks["session_directory"]["ok"]:
+        steps.append(
+            "选择可写目录，并用 evaldesk setup --session-root '<目录>' 重新检查。"
+        )
+    if not checks["local_port"]["ok"]:
+        steps.append("通过 --port 指定其他本地端口。")
+    if not checks["feishu_access"]["ok"]:
+        steps.append(
+            "运行 lark-cli auth status --json --verify 检查登录，再按错误提示补齐权限。"
+        )
+    if not checks["browser"]["ok"]:
+        steps.append("安装或设置默认浏览器；也可以在启动时使用 --no-open。")
+    if report["ok"] and not url:
+        steps.extend(
+            [
+                "运行 lark-cli auth status --json --verify 检查当前用户身份。",
+                "运行 evaldesk setup --url '<飞书表格链接>' --no-browser-check 验证表格访问。",
+            ]
+        )
+    elif report["ok"]:
+        steps.append(
+            "运行 evaldesk diagnose --url '<飞书表格链接>' 检查模板兼容性。"
+        )
+    return steps
+
+
+def command_setup(args: argparse.Namespace) -> int:
+    report = check_environment(
+        url=args.url,
+        sheet_id=args.sheet_id,
+        session_root=args.session_root,
+        port=args.port,
+        check_browser=not args.no_browser_check,
+    )
+    report["next_steps"] = setup_next_steps(report, args.url)
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["ok"] else 1
+
+    print("EvalDesk 环境检查")
+    for item in report["checks"]:
+        skipped = str(item["detail"]).startswith("not checked")
+        marker = "跳过" if skipped else ("通过" if item["ok"] else "失败")
+        label = CHECK_LABELS.get(item["name"], item["name"])
+        print(f"[{marker}] {label}: {item['detail']}")
+    print()
+    print("下一步")
+    for index, step in enumerate(report["next_steps"], start=1):
+        print(f"{index}. {step}")
     return 0 if report["ok"] else 1

@@ -5,3 +5,6 @@ __pycache__/
 playwright-report/
 test-results/
 .evaldesk/
+dist/
+build/
+*.egg-info/
