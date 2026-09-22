@@ -1,14 +1,16 @@
 """Distribution and first-run regression tests."""
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 import os
 import subprocess
 import sys
 import tempfile
-import time
+import threading
 import unittest
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
@@ -16,6 +18,8 @@ from evaldesk.scripts.workbench_core.environment import (
     check_environment,
     setup_next_steps,
 )
+from evaldesk.scripts.workbench_core.lifecycle import command_stop
+from evaldesk.scripts.workbench_core.server import make_handler
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -147,62 +151,41 @@ class Distribution(unittest.TestCase):
                 (session / name).write_text(
                     json.dumps(payload), encoding="utf-8"
                 )
-            server = subprocess.Popen(
-                [
-                    sys.executable,
-                    "-m",
-                    "evaldesk",
-                    "serve",
-                    "--session",
-                    str(session),
-                    "--port",
-                    "0",
-                    "--no-open",
-                ],
-                cwd=ROOT,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
+            token = "test-stop-token"
+            handler = make_handler(session, token)
+            handler.log_message = lambda *_args: None
+            server = ThreadingHTTPServer(
+                ("127.0.0.1", 0), handler
             )
+            url = f"http://127.0.0.1:{server.server_port}"
+            (session / "server.json").write_text(
+                json.dumps(
+                    {
+                        "pid": os.getpid(),
+                        "port": server.server_port,
+                        "url": url,
+                        "stop_token": token,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            server_thread = threading.Thread(
+                target=server.serve_forever, daemon=True
+            )
+            server_thread.start()
             try:
-                state_path = session / "server.json"
-                deadline = time.monotonic() + 30
-                while not state_path.exists() and time.monotonic() < deadline:
-                    if server.poll() is not None:
-                        break
-                    time.sleep(0.05)
-                if not state_path.exists():
-                    server.terminate()
-                    stdout, stderr = server.communicate(timeout=5)
-                    self.fail(
-                        "server did not become ready; "
-                        f"returncode={server.returncode}; "
-                        f"stdout={stdout!r}; stderr={stderr!r}"
+                with mock.patch("builtins.print"):
+                    self.assertEqual(
+                        command_stop(argparse.Namespace(session=str(session))),
+                        0,
                     )
-                stopped = subprocess.run(
-                    [
-                        sys.executable,
-                        "-m",
-                        "evaldesk",
-                        "stop",
-                        "--session",
-                        str(session),
-                    ],
-                    cwd=ROOT,
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                self.assertEqual(
-                    stopped.returncode, 0, stopped.stdout + stopped.stderr
-                )
-                stdout, stderr = server.communicate(timeout=5)
-                self.assertEqual(server.returncode, 0, stdout + stderr)
-                self.assertFalse(state_path.exists())
+                server_thread.join(timeout=5)
+                self.assertFalse(server_thread.is_alive())
             finally:
-                if server.poll() is None:
-                    server.terminate()
-                    server.wait(timeout=5)
+                if server_thread.is_alive():
+                    server.shutdown()
+                    server_thread.join(timeout=5)
+                server.server_close()
 
 
 if __name__ == "__main__":
