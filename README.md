@@ -33,6 +33,14 @@ pipx install .
 也可以不安装，在项目根目录使用 `python3 -m evaldesk`。下文命令中的
 `evaldesk` 均可替换为 `python3 -m evaldesk`。
 
+Windows 原生 PowerShell 使用 `py -m evaldesk`。Windows 用户不要从 WSL、
+容器或远程 Agent 沙箱启动本地工作台；这些环境中的 `127.0.0.1` 不属于
+Windows 浏览器。首次检查时应显式要求 Windows 运行时：
+
+```powershell
+evaldesk setup --expect-runtime windows --no-browser-check
+```
+
 ## 使用
 
 首次使用先运行新手检查：
@@ -45,8 +53,16 @@ evaldesk setup --no-browser-check
 下一步操作。需要机器读取结构化结果时，使用 `evaldesk setup --json`；
 原有的 `evaldesk doctor` 仍保持 JSON 输出。
 
-如果 `lark-cli` 尚未配置，按照所在组织提供的安装方式完成安装，再初始化并
-验证当前用户身份：
+`lark-cli` 是飞书/Lark 官方开源工具，不依赖 TRAE，也不只面向字节员工。
+外部用户可在安装 Node.js 后独立安装：
+
+```bash
+npx @larksuite/cli@latest install
+lark-cli --version
+```
+
+如果所在租户限制开放平台应用或权限范围，应先取得组织管理员批准。随后使用
+用户自己的飞书身份初始化并验证；不要共享他人的 Token、Cookie 或 CLI 配置：
 
 ```bash
 lark-cli config init --new
@@ -69,6 +85,14 @@ evaldesk diagnose --url '<飞书链接>'
 ```bash
 evaldesk launch --url '<飞书链接>' --annotator '<标注人>'
 ```
+
+Windows 使用：
+
+```powershell
+evaldesk launch --expect-runtime windows --url '<飞书链接>' --annotator '<标注人>'
+```
+
+本地链接只能在运行 EvalDesk 的同一台电脑上打开，不能转发给其他用户。
 
 评测结束后，停止服务并生成回写预览：
 
@@ -124,6 +148,9 @@ evaldesk launch --url '<飞书链接>' --annotator '<标注人>' \
 ```bash
 python3 scripts/install_skill.py --target-root '<agent-skills-root>'
 ```
+
+Windows PowerShell 使用
+`py .\scripts\install_skill.py --target-root '<agent-skills-root>'`。
 
 安装脚本默认拒绝覆盖同名 Skill。确认升级时显式追加 `--force`。
 

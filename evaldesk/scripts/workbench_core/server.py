@@ -5,6 +5,7 @@ import argparse
 import json
 import mimetypes
 import os
+import secrets
 import signal
 import sys
 import threading
@@ -95,7 +96,7 @@ def validate_browser_payload(
     return merged
 
 
-def make_handler(session: Path):
+def make_handler(session: Path, stop_token: str | None = None):
     write_lock = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
@@ -157,7 +158,29 @@ def make_handler(session: Path):
             self.send_json(404, {"error": "Not found"})
 
         def do_POST(self) -> None:
-            if urlparse(self.path).path != "/api/results":
+            path = urlparse(self.path).path
+            if path == "/api/stop":
+                try:
+                    size = int(self.headers.get("Content-Length", "0"))
+                    if size > 10_000:
+                        raise WorkbenchError("请求体过大")
+                    payload = json.loads(self.rfile.read(size))
+                    if (
+                        stop_token is None
+                        or not isinstance(payload, dict)
+                        or not secrets.compare_digest(
+                            str(payload.get("token", "")), stop_token
+                        )
+                    ):
+                        raise WorkbenchError("停止令牌无效")
+                    self.send_json(200, {"stopped": True})
+                    threading.Thread(
+                        target=self.server.shutdown, daemon=True
+                    ).start()
+                except (WorkbenchError, json.JSONDecodeError, ValueError) as exc:
+                    self.send_json(403, {"error": str(exc)})
+                return
+            if path != "/api/results":
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -196,8 +219,9 @@ def command_serve(args: argparse.Namespace) -> int:
     if missing_assets:
         raise WorkbenchError(f"缺少 UI 资产: {missing_assets}")
     selected_port = find_available_port(args.port)
+    stop_token = secrets.token_urlsafe(32)
     server = ThreadingHTTPServer(
-        ("127.0.0.1", selected_port), make_handler(session)
+        ("127.0.0.1", selected_port), make_handler(session, stop_token)
     )
     url = f"http://127.0.0.1:{server.server_port}"
     server_state = session / "server.json"
@@ -207,6 +231,7 @@ def command_serve(args: argparse.Namespace) -> int:
             "pid": os.getpid(),
             "port": server.server_port,
             "url": url,
+            "stop_token": stop_token,
             "started_at": utc_now(),
         },
     )

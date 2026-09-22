@@ -2,14 +2,20 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
-from evaldesk.scripts.workbench_core.environment import setup_next_steps
+from evaldesk.scripts.workbench_core.environment import (
+    check_environment,
+    setup_next_steps,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +50,7 @@ class Distribution(unittest.TestCase):
         self.assertEqual(installer.validate_skill(source), "evaldesk")
         self.assertTrue((source / "references" / "installation.md").is_file())
         self.assertTrue((source / "references" / "compatibility.md").is_file())
+        self.assertTrue((source / "references" / "windows.md").is_file())
         self.assertTrue((source / "references" / "writeback-safety.md").is_file())
 
     def test_installer_requires_explicit_replacement(self):
@@ -102,6 +109,91 @@ class Distribution(unittest.TestCase):
         steps = setup_next_steps(report)
         self.assertTrue(any("auth status" in step for step in steps))
         self.assertTrue(any("setup --url" in step for step in steps))
+
+    def test_windows_expectation_rejects_linux_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch(
+                "evaldesk.scripts.workbench_core.environment.current_runtime",
+                return_value="linux",
+            ), mock.patch(
+                "evaldesk.scripts.workbench_core.environment.find_lark_cli",
+                return_value=None,
+            ):
+                report = check_environment(
+                    check_browser=False,
+                    expected_runtime="windows",
+                    session_root=directory,
+                    port=0,
+                )
+        runtime = next(
+            item for item in report["checks"] if item["name"] == "runtime"
+        )
+        self.assertFalse(runtime["ok"])
+        self.assertEqual(runtime["required"], "windows")
+        self.assertIn("runtime", report["blocking_failures"])
+
+    def test_server_stops_through_authenticated_http_endpoint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            session = Path(directory)
+            fixtures = {
+                "manifest.json": {
+                    "schema": {"supported": True},
+                    "source": {"sheet_id": "test-sheet"},
+                },
+                "tasks.json": {"rows": []},
+                "results.json": {"version": 2, "rows": {}},
+            }
+            for name, payload in fixtures.items():
+                (session / name).write_text(
+                    json.dumps(payload), encoding="utf-8"
+                )
+            server = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "evaldesk",
+                    "serve",
+                    "--session",
+                    str(session),
+                    "--port",
+                    "0",
+                    "--no-open",
+                ],
+                cwd=ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            try:
+                state_path = session / "server.json"
+                deadline = time.monotonic() + 5
+                while not state_path.exists() and time.monotonic() < deadline:
+                    if server.poll() is not None:
+                        break
+                    time.sleep(0.05)
+                self.assertTrue(state_path.exists())
+                stopped = subprocess.run(
+                    [
+                        sys.executable,
+                        "-m",
+                        "evaldesk",
+                        "stop",
+                        "--session",
+                        str(session),
+                    ],
+                    cwd=ROOT,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                self.assertEqual(
+                    stopped.returncode, 0, stopped.stdout + stopped.stderr
+                )
+                self.assertEqual(server.wait(timeout=5), 0)
+                self.assertFalse(state_path.exists())
+            finally:
+                if server.poll() is None:
+                    server.terminate()
+                    server.wait(timeout=5)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import argparse
 import sys
 
 from .common import DEFAULT_RANGE, WorkbenchError
-from .environment import command_doctor, command_setup
+from .environment import SUPPORTED_RUNTIMES, command_doctor, command_setup
 from .launcher import command_launch
 from .lifecycle import command_stop
 from .self_test import command_self_test
@@ -53,6 +53,14 @@ def add_prepare_arguments(command: argparse.ArgumentParser) -> None:
     command.add_argument("--force", action="store_true", help="覆盖非空会话目录")
 
 
+def add_runtime_argument(command: argparse.ArgumentParser) -> None:
+    command.add_argument(
+        "--expect-runtime",
+        choices=SUPPORTED_RUNTIMES,
+        help="要求在指定原生平台运行；用于阻止 Windows 客户端误用 Linux 沙箱",
+    )
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         description="从飞书评测模板生成本地评分工作台，并安全预览或回写结果"
@@ -79,6 +87,7 @@ def parser() -> argparse.ArgumentParser:
     doctor.add_argument(
         "--no-browser-check", action="store_true", help="跳过默认浏览器检查"
     )
+    add_runtime_argument(doctor)
     doctor.set_defaults(handler=command_doctor)
 
     setup = subparsers.add_parser(
@@ -92,12 +101,14 @@ def parser() -> argparse.ArgumentParser:
         "--no-browser-check", action="store_true", help="跳过默认浏览器检查"
     )
     setup.add_argument("--json", action="store_true", help="输出结构化 JSON")
+    add_runtime_argument(setup)
     setup.set_defaults(handler=command_setup)
 
     launch = subparsers.add_parser("launch", help="环境检查后创建会话并启动工作台")
     add_prepare_arguments(launch)
     launch.add_argument("--port", type=int, default=4180, help="首选本地端口")
     launch.add_argument("--no-open", action="store_true", help="不自动打开浏览器")
+    add_runtime_argument(launch)
     launch.set_defaults(handler=command_launch)
 
     serve = subparsers.add_parser("serve", help="启动本地评分页面")

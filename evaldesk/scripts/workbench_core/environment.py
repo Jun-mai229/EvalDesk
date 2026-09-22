@@ -21,7 +21,9 @@ from .common import (
 
 MINIMUM_PYTHON = (3, 9)
 REQUIRED_ASSETS = ("index.html", "styles.css", "app.js")
+SUPPORTED_RUNTIMES = ("windows", "macos", "linux")
 CHECK_LABELS = {
+    "runtime": "运行平台",
     "python": "Python",
     "lark_cli": "lark-cli",
     "assets": "界面资源",
@@ -32,14 +34,34 @@ CHECK_LABELS = {
 }
 
 
+def current_runtime() -> str:
+    if sys.platform == "win32":
+        return "windows"
+    if sys.platform == "darwin":
+        return "macos"
+    return "linux"
+
+
 def check_environment(
     url: str | None = None,
     sheet_id: str | None = None,
     session_root: str | None = None,
     port: int = 4180,
     check_browser: bool = True,
+    expected_runtime: str | None = None,
 ) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
+
+    runtime = current_runtime()
+    runtime_ok = expected_runtime is None or runtime == expected_runtime
+    checks.append(
+        {
+            "name": "runtime",
+            "ok": runtime_ok,
+            "detail": f"{runtime} ({sys.platform}; {sys.executable})",
+            "required": expected_runtime or "any",
+        }
+    )
 
     python_ok = sys.version_info >= MINIMUM_PYTHON
     checks.append(
@@ -184,6 +206,7 @@ def command_doctor(args: argparse.Namespace) -> int:
         session_root=args.session_root,
         port=args.port,
         check_browser=not args.no_browser_check,
+        expected_runtime=args.expect_runtime,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["ok"] else 1
@@ -194,6 +217,12 @@ def setup_next_steps(
 ) -> list[str]:
     checks = {item["name"]: item for item in report["checks"]}
     steps: list[str] = []
+    if "runtime" in checks and not checks["runtime"]["ok"]:
+        required = checks["runtime"].get("required", "requested")
+        steps.append(
+            f"当前进程不是 {required} 原生运行时。请在目标电脑的原生终端中运行 EvalDesk；"
+            "不要从 WSL、容器或远程 Agent 沙箱启动本地工作台。"
+        )
     if not checks["python"]["ok"]:
         steps.append("安装 Python 3.9 或更高版本，然后重新运行 evaldesk setup。")
     if not checks["lark_cli"]["ok"]:
@@ -231,6 +260,7 @@ def command_setup(args: argparse.Namespace) -> int:
         session_root=args.session_root,
         port=args.port,
         check_browser=not args.no_browser_check,
+        expected_runtime=args.expect_runtime,
     )
     report["next_steps"] = setup_next_steps(report, args.url)
     if args.json:

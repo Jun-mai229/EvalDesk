@@ -5,13 +5,30 @@ description: Operate a local Feishu image and video evaluation workbench. Use fo
 
 # EvalDesk
 
-Before the first run, read `references/installation.md`. Use the `evaldesk`
-executable when installed. In the EvalDesk source directory, use
-`python3 -m evaldesk` as an equivalent command.
+Before the first run, read the
+[installation guide](references/installation.md). Use the `evaldesk` executable
+when installed. In the EvalDesk source directory, use `python3 -m evaldesk` on
+macOS/Linux or `py -m evaldesk` on Windows.
+
+## Runtime Placement
+
+The browser and EvalDesk server must run on the same computer. A loopback URL
+such as `http://127.0.0.1:4180` is never a shareable URL.
+
+When the user's desktop is Windows:
+
+1. Read the [Windows guide](references/windows.md).
+2. Run EvalDesk only from native Windows PowerShell or Command Prompt.
+3. Pass `--expect-runtime windows` to `setup` and `launch`.
+4. Stop if the runtime check reports Linux, `/home/...`, WSL, a container, or a
+   remote Agent sandbox. Do not launch there and do not return its loopback URL.
+5. Never claim that an internal HTTP 200 check proves the Windows browser can
+   reach a sandboxed service.
 
 ## Workflow
 
-1. Run `evaldesk setup --no-browser-check`.
+1. Run `evaldesk setup --no-browser-check`. On Windows, run
+   `evaldesk setup --expect-runtime windows --no-browser-check`.
 2. For a new or changed sheet template, run
    `evaldesk diagnose --url '<url>'` before creating a session.
 3. If the report requires a target group, rerun with
@@ -19,7 +36,8 @@ executable when installed. In the EvalDesk source directory, use
 4. If only field names differ, create a minimal JSON alias file and pass the
    same `--aliases <path>` option to both `diagnose` and `launch`.
 5. Start the workbench with
-   `evaldesk launch --url '<url>' --annotator '<name>'`.
+   `evaldesk launch --url '<url>' --annotator '<name>'`. On Windows, add
+   `--expect-runtime windows`.
 6. Keep the session directory private. It contains source links, media URLs,
    and annotation results.
 7. Stop the local server with `evaldesk stop --session '<directory>'`.
@@ -36,5 +54,6 @@ executable when installed. In the EvalDesk source directory, use
 - Never package credentials or `~/.evaldesk/sessions/`.
 - Stop when template diagnosis reports unsupported or ambiguous mappings.
 
-Read `references/compatibility.md` for template coverage and
-`references/writeback-safety.md` before changing write-back behavior.
+Read [template compatibility](references/compatibility.md) for template
+coverage and [write-back safety](references/writeback-safety.md) before
+changing write-back behavior.

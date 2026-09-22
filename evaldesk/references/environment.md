@@ -15,6 +15,10 @@ new machine.
 | Network | Access to Feishu and the media hosts referenced by the sheet |
 | Filesystem | Write access to the session directory |
 
+The browser and server must run on the same host. For a Windows browser, run
+EvalDesk from native Windows Python and include `--expect-runtime windows`.
+Do not launch it in WSL, a container, or a remote Agent sandbox.
+
 The Python runtime uses only the standard library. Do not add a package manager
 or virtual environment unless a future feature introduces a real dependency.
 
@@ -33,9 +37,10 @@ and selected sheet:
 evaldesk setup --url '<feishu-sheet-url>' --no-browser-check
 ```
 
-The check reports Python, `lark-cli`, packaged UI assets, session-directory
-permissions, browser availability, a free local port, and optional Feishu
-access. Browser discovery is advisory; all other failed checks block launch.
+The check reports the runtime platform, Python, `lark-cli`, packaged UI assets,
+session-directory permissions, browser availability, a free local port, and
+optional Feishu access. Browser discovery is advisory; all other failed checks
+block launch.
 
 ## Authentication Boundary
 

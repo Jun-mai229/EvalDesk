@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evaldesk"
-version = "0.2.2"
+version = "0.3.0"
 description = "Local Feishu evaluation workbench with safe write-back previews"
 readme = "README.md"
 requires-python = ">=3.9"

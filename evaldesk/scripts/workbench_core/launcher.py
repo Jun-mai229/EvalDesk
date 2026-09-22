@@ -24,6 +24,7 @@ def command_launch(args: argparse.Namespace) -> int:
         session_root=str(session.parent),
         port=args.port,
         check_browser=not args.no_open,
+        expected_runtime=args.expect_runtime,
     )
     print(
         json.dumps(
