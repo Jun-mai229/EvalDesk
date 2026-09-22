@@ -1,0 +1,22 @@
+{
+  "basic_fields": {
+    "id": ["index", "id", "任务id", "case id"],
+    "prompt": ["prompt", "提示词", "任务提示词"],
+    "prompt_zh": ["prompt翻译", "prompt_中文翻译", "中文提示词"],
+    "references": ["用户素材", "垫图", "参考图", "参考素材", "参照物"],
+    "annotator": ["标注人", "评测人"],
+    "arbitrator": ["仲裁人"],
+    "reviewer": ["review人", "复核人"],
+    "outputs": ["结果图", "video_url", "输出", "生成结果"]
+  },
+  "score_fields": {
+    "human_score": ["打分", "人评打分", "人工评分"],
+    "tags": ["打分标签", "评分标签"],
+    "reason": ["打分归因", "评分理由", "评分归因"],
+    "machine_score": ["机评分数", "机器评分"],
+    "review_label": ["人机review打签", "review标签"],
+    "review_reason": ["review归因", "review理由"],
+    "arbitration_label": ["仲裁标签"]
+  },
+  "mos": ["mos分", "mos", "整体评分"]
+}

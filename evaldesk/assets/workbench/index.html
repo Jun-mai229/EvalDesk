@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EvalDesk</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">E</div>
+      <div class="brand-copy">
+        <strong>EvalDesk</strong>
+        <span id="sheetName">本地会话</span>
+      </div>
+    </div>
+    <div class="progress">
+      <span id="progressText">0 / 0</span>
+      <div class="track"><i id="progressBar"></i></div>
+    </div>
+    <div class="top-actions">
+      <a class="source-link" id="sourceLink" target="_blank" rel="noopener noreferrer" title="打开当前飞书来源">
+        <span class="source-label">飞书</span>
+        <span class="source-url" id="sourceUrl">载入中</span>
+      </a>
+      <label class="reviewer-field" for="reviewerName">
+        <span>评测人</span>
+        <input class="reviewer-input" id="reviewerName" type="text" maxlength="40" placeholder="请填写">
+      </label>
+      <span class="status" id="saveState">已载入</span>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <button class="panel-restore restore-left" id="restoreLeft" title="展开任务队列" aria-label="展开任务队列" aria-controls="leftPanel" hidden>›</button>
+    <button class="panel-restore restore-right" id="restoreRight" title="展开评分面板" aria-label="展开评分面板" aria-controls="rightPanel" hidden>‹</button>
+    <aside class="queue workspace-panel workspace-left" id="leftPanel">
+      <div class="queue-head">
+        <div class="panel-head">
+          <span>任务队列</span>
+          <button class="panel-toggle" id="collapseLeft" title="收起任务队列" aria-label="收起任务队列" aria-controls="leftPanel">‹</button>
+        </div>
+        <div class="filters">
+          <button class="active" data-filter="all">全部</button>
+          <button data-filter="pending">未登记</button>
+          <button data-filter="done">已保存</button>
+        </div>
+      </div>
+      <div class="task-list" id="taskList"></div>
+    </aside>
+
+    <div class="resizer resize-left" id="resizeLeft" role="separator" aria-orientation="vertical" aria-label="调整任务队列宽度" aria-valuemin="160" tabindex="0"></div>
+
+    <section class="review workspace-panel workspace-center" id="centerPanel">
+      <div class="review-head">
+        <div class="review-title">
+          <span class="eyebrow" id="kind">评测任务</span>
+          <h1 id="title">载入中</h1>
+        </div>
+        <div class="nav">
+          <button class="icon" id="previous" title="上一条" aria-label="上一条">‹</button>
+          <button class="icon" id="next" title="下一条" aria-label="下一条">›</button>
+        </div>
+      </div>
+      <div class="output-tabs" id="outputTabs"></div>
+      <div class="media" id="media"></div>
+      <section class="prompt-panel">
+        <div class="section-heading">
+          <span class="section-index">03</span>
+          <div class="section-title">
+            <h2>任务提示词</h2>
+            <span>原始 Prompt</span>
+          </div>
+        </div>
+        <div class="prompt" id="prompt"></div>
+      </section>
+    </section>
+
+    <div class="resizer resize-right" id="resizeRight" role="separator" aria-orientation="vertical" aria-label="调整评分面板宽度" aria-valuemin="280" tabindex="0"></div>
+
+    <aside class="annotation workspace-panel workspace-right" id="rightPanel">
+      <div class="annotation-head">
+        <div class="dimension-tabs" id="dimensionTabs"></div>
+        <button class="panel-toggle" id="collapseRight" title="收起评分面板" aria-label="收起评分面板" aria-controls="rightPanel">›</button>
+      </div>
+      <div class="form" id="form"></div>
+      <div class="footer">
+        <div class="mos">
+          <label for="mos" id="mosLabel">MOS</label>
+          <input id="mos" type="number" min="1" max="5" step="0.1">
+        </div>
+        <button class="primary" id="saveNext">保存并下一条</button>
+      </div>
+    </aside>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evaldesk"
+version = "0.2.0"
+description = "Local Feishu evaluation workbench with safe write-back previews"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+evaldesk = "evaldesk.scripts.workbench_core.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["evaldesk*"]
+
+[tool.setuptools.package-data]
+evaldesk = [
+  "assets/workbench/*",
+  "config/*.json",
+  "references/*.md",
+]
