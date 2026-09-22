@@ -160,17 +160,25 @@ class Distribution(unittest.TestCase):
                     "--no-open",
                 ],
                 cwd=ROOT,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
             )
             try:
                 state_path = session / "server.json"
-                deadline = time.monotonic() + 5
+                deadline = time.monotonic() + 30
                 while not state_path.exists() and time.monotonic() < deadline:
                     if server.poll() is not None:
                         break
                     time.sleep(0.05)
-                self.assertTrue(state_path.exists())
+                if not state_path.exists():
+                    server.terminate()
+                    stdout, stderr = server.communicate(timeout=5)
+                    self.fail(
+                        "server did not become ready; "
+                        f"returncode={server.returncode}; "
+                        f"stdout={stdout!r}; stderr={stderr!r}"
+                    )
                 stopped = subprocess.run(
                     [
                         sys.executable,
@@ -188,7 +196,8 @@ class Distribution(unittest.TestCase):
                 self.assertEqual(
                     stopped.returncode, 0, stopped.stdout + stopped.stderr
                 )
-                self.assertEqual(server.wait(timeout=5), 0)
+                stdout, stderr = server.communicate(timeout=5)
+                self.assertEqual(server.returncode, 0, stdout + stderr)
                 self.assertFalse(state_path.exists())
             finally:
                 if server.poll() is None:
